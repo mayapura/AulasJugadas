@@ -5,6 +5,7 @@ import pygame
 import config
 from src.entities.Aulasjugadas import Aula
 from src.entities.player import Player
+from src.minigames.hardware_software import HardwareSoftwareGame
 from src.ui.hud import HUD
 from src.ui.menu import Menu
 from src.ui.nombre_input import NombreInput
@@ -13,7 +14,6 @@ MINIJUEGOS_INFO = {
     "MINIJUEGO_NUMEROS": ("Juego de Números (Pizarra)", config.COLOR_NUMEROS, (100, 250)),
     "MINIJUEGO_LECTURA": ("Juego de Lectura (Libro)", config.COLOR_LECTURA, (120, 250)),
     "MINIJUEGO_GEOGRAFIA": ("Juego de Geografía (Globo)", config.COLOR_GEOGRAFIA, (100, 250)),
-    "MINIJUEGO_COMPUTACION": ("Juego de Informática (Laptop)", config.COLOR_COMPUTACION, (80, 250)),
 }
 
 
@@ -32,6 +32,7 @@ class Game:
         self.menu = Menu(config.ANCHO, config.ALTO)
         self.input_nombre = NombreInput(config.ANCHO, config.ALTO)
         self.jugador = Player()
+        self.juego_hs = HardwareSoftwareGame(config.ANCHO, config.ALTO, self.jugador)
 
         self.estado_actual = "MENU"
         self.ejecutando = True
@@ -42,16 +43,30 @@ class Game:
                 self.ejecutando = False
                 continue
 
+            if (
+                evento.type == pygame.KEYDOWN
+                and evento.key == pygame.K_ESCAPE
+                and self.estado_actual not in ("MENU", "INGRESAR_NOMBRE", "AULA")
+            ):
+                self._volver_al_aula()
+                continue
+
             if self.estado_actual == "MENU":
                 self._procesar_evento_menu(evento, posicion_mouse)
             elif self.estado_actual == "INGRESAR_NOMBRE":
                 self._procesar_evento_nombre(evento)
-            elif evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
-                self._procesar_clic(posicion_mouse)
-            elif evento.type == pygame.KEYDOWN and evento.key == pygame.K_ESCAPE:
-                if self.estado_actual != "AULA":
-                    self.estado_actual = "AULA"
-                    pygame.mixer.music.play(-1)
+            elif self.estado_actual == "AULA":
+                if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
+                    self._procesar_clic(posicion_mouse)
+            elif self.estado_actual == "JUEGO_HARDWARE_SOFTWARE":
+                self.juego_hs.manejar_evento(evento, posicion_mouse)
+                if self.juego_hs.debe_volver_aula:
+                    self.juego_hs.debe_volver_aula = False
+                    self._volver_al_aula()
+
+    def _volver_al_aula(self):
+        self.estado_actual = "AULA"
+        pygame.mixer.music.play(-1)
 
     def _procesar_evento_menu(self, evento, posicion_mouse):
         if evento.type != pygame.MOUSEBUTTONDOWN or evento.button != 1:
@@ -70,9 +85,6 @@ class Game:
             self.estado_actual = "AULA"
 
     def _procesar_clic(self, posicion_mouse):
-        if self.estado_actual != "AULA":
-            return
-
         resultado_hud = self.hud.manejar_clic(posicion_mouse)
         if resultado_hud == "salir":
             self.ejecutando = False
@@ -81,6 +93,8 @@ class Game:
             return
 
         nuevo_estado = self.aula.manejar_clic(posicion_mouse)
+        if nuevo_estado == "JUEGO_HARDWARE_SOFTWARE":
+            self.juego_hs.reiniciar()
         if nuevo_estado:
             self.estado_actual = nuevo_estado
 
@@ -89,6 +103,8 @@ class Game:
             hover = self.menu.sobre_boton(posicion_mouse)
         elif self.estado_actual == "AULA":
             hover = self.aula.zona_bajo_mouse(posicion_mouse) is not None or self.hud.sobre_boton(posicion_mouse)
+        elif self.estado_actual == "JUEGO_HARDWARE_SOFTWARE":
+            hover = self.juego_hs.sobre_elemento_interactivo(posicion_mouse)
         else:
             hover = False
 
@@ -103,6 +119,8 @@ class Game:
         elif self.estado_actual == "AULA":
             self.aula.dibujar(self.pantalla, posicion_mouse)
             self.hud.dibujar(self.pantalla, posicion_mouse)
+        elif self.estado_actual == "JUEGO_HARDWARE_SOFTWARE":
+            self.juego_hs.dibujar(self.pantalla, posicion_mouse)
         else:
             texto, color, posicion_texto = MINIJUEGOS_INFO[self.estado_actual]
             self.pantalla.fill(color)
@@ -123,6 +141,8 @@ class Game:
 
             if self.estado_actual == "INGRESAR_NOMBRE":
                 self.input_nombre.actualizar(dt_ms)
+            elif self.estado_actual == "JUEGO_HARDWARE_SOFTWARE":
+                self.juego_hs.actualizar(dt_ms)
 
             self._dibujar(posicion_mouse)
 

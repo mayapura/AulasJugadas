@@ -23,7 +23,7 @@ class Aula:
             "MINIJUEGO_NUMEROS": pygame.Rect(270, 15, 340, 160),      # Pizarra blanca en la pared
             "MINIJUEGO_GEOGRAFIA": pygame.Rect(175, 115, 95, 90),     # Globo terráqueo
             "MINIJUEGO_LECTURA": pygame.Rect(240, 475, 245, 115),     # Libro abierto abajo al centro
-            "MINIJUEGO_COMPUTACION": pygame.Rect(485, 175, 145, 65),  # Laptop en el escritorio del profesor
+            "JUEGO_HARDWARE_SOFTWARE": pygame.Rect(485, 175, 145, 65),  # Laptop en el escritorio del profesor
         }
 
     def zona_bajo_mouse(self, posicion_mouse):

@@ -5,7 +5,7 @@ import pygame
 import config
 from src.utils.resource_loader import cargar_imagen
 
-TIEMPO_TOTAL_MS = 90_000
+TIEMPO_TOTAL_MS = 7 * 60 * 1000
 
 PUNTOS_CLASIFICACION_CORRECTA = 10
 PUNTOS_CLASIFICACION_INCORRECTA = -5
@@ -19,7 +19,7 @@ DATASET = [
     {"nombre": "Mouse", "palabra": "MOUSE", "categoria": "HARDWARE", "archivo": "mouse.png"},
     {"nombre": "Monitor", "palabra": "MONITOR", "categoria": "HARDWARE", "archivo": "monitor.png"},
     {"nombre": "Impresora", "palabra": "IMPRESORA", "categoria": "HARDWARE", "archivo": "impresora.png"},
-    {"nombre": "Parlantes", "palabra": "PARLANTES", "categoria": "HARDWARE", "archivo": "parlantes.png"},
+    {"nombre": "Parlantes", "palabra": "PARLANTES", "categoria": "HARDWARE", "archivo": "parlantes.jpg"},
     {"nombre": "Pendrive", "palabra": "PENDRIVE", "categoria": "HARDWARE", "archivo": "pendrive.png"},
     {"nombre": "Cámara web", "palabra": "CAMARA", "categoria": "HARDWARE", "archivo": "camara_web.png"},
     {"nombre": "Auriculares", "palabra": "AURICULARES", "categoria": "HARDWARE", "archivo": "auriculares.png"},
@@ -29,7 +29,7 @@ DATASET = [
     {"nombre": "Calculadora", "palabra": "CALCULADORA", "categoria": "SOFTWARE", "archivo": "calculadora.png"},
     {"nombre": "Excel", "palabra": "EXCEL", "categoria": "SOFTWARE", "archivo": "excel.png"},
     {"nombre": "PowerPoint", "palabra": "POWERPOINT", "categoria": "SOFTWARE", "archivo": "powerpoint.png"},
-    {"nombre": "Windows", "palabra": "WINDOWS", "categoria": "SOFTWARE", "archivo": "windows.png"},
+    {"nombre": "Windows", "palabra": "WINDOWS", "categoria": "SOFTWARE", "archivo": "Windows.png"},
     {"nombre": "Photoshop", "palabra": "PHOTOSHOP", "categoria": "SOFTWARE", "archivo": "photoshop.png"},
 ]
 
@@ -48,16 +48,24 @@ class HardwareSoftwareGame:
         self.fuente_pequena = pygame.font.SysFont("Arial", 20)
         self.fuente_letra = pygame.font.SysFont("Arial", 22, bold=True)
 
-        self.caja_hardware_rect = pygame.Rect(40, 400, 300, 150)
-        self.caja_software_rect = pygame.Rect(ancho - 340, 400, 300, 150)
+        self.fondo = cargar_imagen(config.IMG_FONDO_HARDWARE_SOFTWARE, (ancho, alto))
+
+        self.caja_hardware_rect = pygame.Rect(50, 380, 200, 150)
+        self.caja_software_rect = pygame.Rect(ancho - 250, 380, 200, 150)
+        self.imagen_caja = cargar_imagen(config.IMG_CAJA, (200, 150))
 
         self.imagen_tamano = (150, 150)
         self.imagen_pos_inicial = (ancho // 2 - 75, 220)
 
         self.rect_reintentar = pygame.Rect(0, 0, 220, 60)
         self.rect_reintentar.center = (ancho // 2, alto // 2 + 30)
-        self.rect_volver_aula = pygame.Rect(0, 0, 220, 60)
-        self.rect_volver_aula.center = (ancho // 2, alto // 2 + 110)
+        self.rect_volver = pygame.Rect(0, 0, 220, 60)
+        self.rect_volver.center = (ancho // 2, alto // 2 + 110)
+
+        self.btn_volver_icono_rect = pygame.Rect(15, 15, 40, 40)
+        self.icono_volver_normal = cargar_imagen(config.IMG_SALIR, (40, 40))
+        self.icono_volver_grande = cargar_imagen(config.IMG_SALIR, (50, 50))
+        self.icono_volver_cargado = self.icono_volver_normal is not None and self.icono_volver_grande is not None
 
         self._construir_teclado()
         self.reiniciar()
@@ -82,7 +90,7 @@ class HardwareSoftwareGame:
         self.indice_item = 0
         self.tiempo_restante_ms = TIEMPO_TOTAL_MS
         self.terminado = False
-        self.debe_volver_aula = False
+        self.debe_salir = False
         self.jugador.puntuacion = 0
         self._cargar_item_actual()
 
@@ -111,6 +119,15 @@ class HardwareSoftwareGame:
 
     # --- eventos ---
     def manejar_evento(self, evento, posicion_mouse):
+        if (
+            evento.type == pygame.MOUSEBUTTONDOWN
+            and evento.button == 1
+            and self.icono_volver_cargado
+            and self.btn_volver_icono_rect.collidepoint(posicion_mouse)
+        ):
+            self.debe_salir = True
+            return
+
         if self.terminado:
             self._manejar_evento_fin(evento, posicion_mouse)
         elif self.fase == "CLASIFICAR":
@@ -179,21 +196,24 @@ class HardwareSoftwareGame:
             return
         if self.rect_reintentar.collidepoint(posicion_mouse):
             self.reiniciar()
-        elif self.rect_volver_aula.collidepoint(posicion_mouse):
-            self.debe_volver_aula = True
+        elif self.rect_volver.collidepoint(posicion_mouse):
+            self.debe_salir = True
 
     # --- actualización ---
     def actualizar(self, dt_ms):
         if self.terminado:
             return
+
         self.tiempo_restante_ms -= dt_ms
         if self.tiempo_restante_ms <= 0:
             self.tiempo_restante_ms = 0
             self.terminado = True
 
     def sobre_elemento_interactivo(self, posicion_mouse):
+        if self.icono_volver_cargado and self.btn_volver_icono_rect.collidepoint(posicion_mouse):
+            return True
         if self.terminado:
-            return self.rect_reintentar.collidepoint(posicion_mouse) or self.rect_volver_aula.collidepoint(
+            return self.rect_reintentar.collidepoint(posicion_mouse) or self.rect_volver.collidepoint(
                 posicion_mouse
             )
         if self.fase == "CLASIFICAR":
@@ -208,7 +228,11 @@ class HardwareSoftwareGame:
 
     # --- dibujado ---
     def dibujar(self, pantalla, posicion_mouse):
-        pantalla.fill((235, 245, 255))
+        if self.fondo is not None:
+            pantalla.blit(self.fondo, (0, 0))
+        else:
+            pantalla.fill((235, 245, 255))
+
         self._dibujar_encabezado(pantalla)
 
         if self.terminado:
@@ -217,6 +241,8 @@ class HardwareSoftwareGame:
             self._dibujar_clasificar(pantalla)
         elif self.fase == "ADIVINAR":
             self._dibujar_adivinar(pantalla, posicion_mouse)
+
+        self._dibujar_icono_volver(pantalla, posicion_mouse)
 
     def _dibujar_imagen(self, pantalla, rect):
         if self.imagen_actual is not None:
@@ -228,25 +254,37 @@ class HardwareSoftwareGame:
             pantalla.blit(texto, texto.get_rect(center=rect.center))
 
     def _dibujar_encabezado(self, pantalla):
-        segundos = self.tiempo_restante_ms // 1000
-        texto_tiempo = self.fuente_mediana.render(f"Tiempo: {segundos}s", True, (30, 30, 30))
-        pantalla.blit(texto_tiempo, (20, 20))
+        segundos_totales = self.tiempo_restante_ms // 1000
+        minutos, segundos = divmod(segundos_totales, 60)
+        texto_tiempo = self.fuente_mediana.render(f"Tiempo: {minutos}:{segundos:02d}", True, config.COLOR_BLANCO)
+        pantalla.blit(texto_tiempo, (65, 25))
 
-        texto_puntos = self.fuente_mediana.render(f"Puntos: {self.jugador.puntuacion}", True, (30, 30, 30))
-        pantalla.blit(texto_puntos, (self.ancho - texto_puntos.get_width() - 20, 20))
+        texto_puntos = self.fuente_mediana.render(f"Puntos: {self.jugador.puntuacion}", True, config.COLOR_BLANCO)
+        pantalla.blit(texto_puntos, (self.ancho - texto_puntos.get_width() - 20, 25))
+
+    def _dibujar_icono_volver(self, pantalla, posicion_mouse):
+        if not self.icono_volver_cargado:
+            return
+        if self.btn_volver_icono_rect.collidepoint(posicion_mouse):
+            pantalla.blit(self.icono_volver_grande, (self.btn_volver_icono_rect.x - 5, self.btn_volver_icono_rect.y - 5))
+        else:
+            pantalla.blit(self.icono_volver_normal, self.btn_volver_icono_rect.topleft)
+
+    def _dibujar_caja(self, pantalla, rect, etiqueta):
+        if self.imagen_caja is not None:
+            pantalla.blit(self.imagen_caja, rect)
+        else:
+            pygame.draw.rect(pantalla, (220, 220, 220), rect, border_radius=12)
+            pygame.draw.rect(pantalla, (40, 40, 40), rect, width=2, border_radius=12)
+
+        texto = self.fuente_mediana.render(etiqueta, True, config.COLOR_BLANCO)
+        pantalla.blit(texto, texto.get_rect(center=(rect.centerx, rect.bottom + 20)))
 
     def _dibujar_clasificar(self, pantalla):
-        pygame.draw.rect(pantalla, (200, 230, 200), self.caja_hardware_rect, border_radius=12)
-        pygame.draw.rect(pantalla, (40, 40, 40), self.caja_hardware_rect, width=2, border_radius=12)
-        etiqueta_hw = self.fuente_mediana.render("Hardware", True, (30, 30, 30))
-        pantalla.blit(etiqueta_hw, etiqueta_hw.get_rect(center=self.caja_hardware_rect.center))
+        self._dibujar_caja(pantalla, self.caja_hardware_rect, "Hardware")
+        self._dibujar_caja(pantalla, self.caja_software_rect, "Software")
 
-        pygame.draw.rect(pantalla, (200, 200, 240), self.caja_software_rect, border_radius=12)
-        pygame.draw.rect(pantalla, (40, 40, 40), self.caja_software_rect, width=2, border_radius=12)
-        etiqueta_sw = self.fuente_mediana.render("Software", True, (30, 30, 30))
-        pantalla.blit(etiqueta_sw, etiqueta_sw.get_rect(center=self.caja_software_rect.center))
-
-        ayuda = self.fuente_pequena.render("Arrastrá la imagen a la caja correcta", True, (60, 60, 60))
+        ayuda = self.fuente_pequena.render("Arrastrá la imagen a la caja correcta", True, config.COLOR_BLANCO)
         pantalla.blit(ayuda, ayuda.get_rect(center=(self.ancho // 2, self.imagen_pos_inicial[1] - 30)))
 
         self._dibujar_imagen(pantalla, self.imagen_rect)
@@ -263,14 +301,16 @@ class HardwareSoftwareGame:
 
         for indice, letra in enumerate(palabra):
             x = x_inicial + indice * espacio
-            pygame.draw.line(pantalla, (30, 30, 30), (x, y_palabra + 30), (x + espacio - 10, y_palabra + 30), 3)
+            linea_y = y_palabra + 30
+            pygame.draw.line(pantalla, config.COLOR_BLANCO, (x, linea_y), (x + espacio - 10, linea_y), 3)
             if letra in self.letras_adivinadas:
-                superficie = self.fuente_grande.render(letra, True, (30, 30, 30))
-                pantalla.blit(superficie, (x, y_palabra))
+                superficie = self.fuente_grande.render(letra, True, config.COLOR_BLANCO)
+                rect_letra = superficie.get_rect(midbottom=(x + (espacio - 10) // 2, linea_y - 8))
+                pantalla.blit(superficie, rect_letra)
 
         if self.letras_falladas:
             texto_falladas = self.fuente_pequena.render(
-                "Falladas: " + ", ".join(sorted(self.letras_falladas)), True, (150, 30, 30)
+                "Falladas: " + ", ".join(sorted(self.letras_falladas)), True, (255, 110, 110)
             )
             pantalla.blit(texto_falladas, texto_falladas.get_rect(center=(self.ancho // 2, y_palabra + 60)))
 
@@ -290,14 +330,16 @@ class HardwareSoftwareGame:
             pantalla.blit(superficie_letra, superficie_letra.get_rect(center=rect.center))
 
     def _dibujar_fin(self, pantalla, posicion_mouse):
-        titulo = self.fuente_grande.render("¡Tiempo terminado!", True, (30, 30, 30))
+        titulo = self.fuente_grande.render("¡Tiempo terminado!", True, config.COLOR_BLANCO)
         pantalla.blit(titulo, titulo.get_rect(center=(self.ancho // 2, self.alto // 2 - 100)))
 
-        texto_puntaje = self.fuente_mediana.render(f"Puntaje final: {self.jugador.puntuacion}", True, (30, 30, 30))
+        texto_puntaje = self.fuente_mediana.render(
+            f"Puntaje final: {self.jugador.puntuacion}", True, config.COLOR_BLANCO
+        )
         pantalla.blit(texto_puntaje, texto_puntaje.get_rect(center=(self.ancho // 2, self.alto // 2 - 50)))
 
         self._dibujar_boton(pantalla, self.rect_reintentar, "Reintentar", posicion_mouse)
-        self._dibujar_boton(pantalla, self.rect_volver_aula, "Volver al aula", posicion_mouse)
+        self._dibujar_boton(pantalla, self.rect_volver, "Volver", posicion_mouse)
 
     def _dibujar_boton(self, pantalla, rect, texto, posicion_mouse):
         color = config.COLOR_BLANCO if rect.collidepoint(posicion_mouse) else (225, 225, 225)

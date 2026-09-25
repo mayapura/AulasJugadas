@@ -9,11 +9,15 @@ RUTA_IMAGENES = "assets/images/"
 RUTA_SONIDOS = "assets/sounds/"
 
 IMG_FONDO_AULA = RUTA_IMAGENES + "image_01.jpeg"
+IMG_FONDO_SUBMENU_COMPUTACION = RUTA_IMAGENES + "image_02.jpeg"
 IMG_PLAY = RUTA_IMAGENES + "play.png"
 IMG_PAUSE = RUTA_IMAGENES + "pause.png"
 IMG_SALIR = RUTA_IMAGENES + "logout.png"
+IMG_CAJA = RUTA_IMAGENES + "caja.png"
+IMG_FONDO_HARDWARE_SOFTWARE = RUTA_IMAGENES + "fondohardsoft.jpeg"
 
 SONIDO_MUSICA_FONDO = RUTA_SONIDOS + "Pizarra_de_ideas.wav"
+SONIDO_MUSICA_SUBMENU_COMPUTACION = RUTA_SONIDOS + "aulas_jugadas_2.mpeg"
 SONIDO_CLIC = RUTA_SONIDOS + "click_videojuego.wav"
 
 VOLUMEN_MUSICA = 0.3

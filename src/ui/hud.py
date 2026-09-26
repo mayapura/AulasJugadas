@@ -1,7 +1,7 @@
 import pygame
 
 import config
-from src.utils.resource_loader import cargar_imagen
+from src.utils.resource_loader import cargar_imagen, cargar_sonido
 
 
 class HUD:
@@ -20,20 +20,23 @@ class HUD:
         self.salir_normal = cargar_imagen(config.IMG_SALIR, (40, 40))
         self.salir_grande = cargar_imagen(config.IMG_SALIR, (50, 50))
         self.icono_salir_cargado = self.salir_normal is not None and self.salir_grande is not None
+        self.sonido_salir = cargar_sonido(config.SONIDO_SALIR)
 
         self.btn_play_rect = pygame.Rect(15, 15, 40, 40)
         self.btn_pause_rect = pygame.Rect(65, 15, 40, 40)
         self.btn_salir_rect = pygame.Rect(745, 545, 40, 40)
 
-    def sobre_boton(self, posicion_mouse):
+    def sobre_boton(self, posicion_mouse, mostrar_salir=True):
         sobre_musica = self.iconos_musica_cargados and (
             self.btn_play_rect.collidepoint(posicion_mouse)
             or self.btn_pause_rect.collidepoint(posicion_mouse)
         )
-        sobre_salir = self.icono_salir_cargado and self.btn_salir_rect.collidepoint(posicion_mouse)
+        sobre_salir = (
+            mostrar_salir and self.icono_salir_cargado and self.btn_salir_rect.collidepoint(posicion_mouse)
+        )
         return sobre_musica or sobre_salir
 
-    def manejar_clic(self, posicion_mouse):
+    def manejar_clic(self, posicion_mouse, mostrar_salir=True):
         """Devuelve 'musica', 'salir' o None según el botón donde se hizo clic."""
         if self.iconos_musica_cargados:
             if self.btn_play_rect.collidepoint(posicion_mouse):
@@ -43,12 +46,14 @@ class HUD:
                 pygame.mixer.music.pause()
                 return "musica"
 
-        if self.icono_salir_cargado and self.btn_salir_rect.collidepoint(posicion_mouse):
+        if mostrar_salir and self.icono_salir_cargado and self.btn_salir_rect.collidepoint(posicion_mouse):
+            if self.sonido_salir is not None:
+                self.sonido_salir.play()
             return "salir"
 
         return None
 
-    def dibujar(self, pantalla, posicion_mouse):
+    def dibujar(self, pantalla, posicion_mouse, mostrar_salir=True):
         if self.iconos_musica_cargados:
             if self.btn_play_rect.collidepoint(posicion_mouse):
                 pantalla.blit(self.play_grande, (self.btn_play_rect.x - 5, self.btn_play_rect.y - 5))
@@ -60,7 +65,7 @@ class HUD:
             else:
                 pantalla.blit(self.pause_normal, (self.btn_pause_rect.x, self.btn_pause_rect.y))
 
-        if self.icono_salir_cargado:
+        if mostrar_salir and self.icono_salir_cargado:
             if self.btn_salir_rect.collidepoint(posicion_mouse):
                 pantalla.blit(self.salir_grande, (self.btn_salir_rect.x - 5, self.btn_salir_rect.y - 5))
             else:

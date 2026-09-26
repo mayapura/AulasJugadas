@@ -1,6 +1,7 @@
 import pygame
 
 import config
+from src.utils.resource_loader import cargar_fuente, cargar_imagen, cargar_sonido
 
 
 class Menu:
@@ -10,8 +11,13 @@ class Menu:
         self.ancho = ancho
         self.alto = alto
 
-        self.fuente_titulo = pygame.font.SysFont("Arial", 64, bold=True)
-        self.fuente_boton = pygame.font.SysFont("Arial", 32)
+        fondo_original = cargar_imagen(config.IMG_FONDO_INICIO)
+        self.fondo = pygame.transform.scale(fondo_original, (ancho, alto)) if fondo_original is not None else None
+        self.sonido_jugar = cargar_sonido(config.SONIDO_CLIC_INICIO)
+        self.sonido_salir = cargar_sonido(config.SONIDO_SALIR)
+
+        self.fuente_titulo = cargar_fuente(config.FUENTE_TITULO, 64)
+        self.fuente_boton = cargar_fuente(config.FUENTE_BOTON, 32)
 
         self.rect_jugar = pygame.Rect(0, 0, 220, 70)
         self.rect_jugar.center = (ancho // 2, alto // 2 + 20)
@@ -24,10 +30,16 @@ class Menu:
 
     def manejar_clic(self, posicion_mouse):
         if self.rect_jugar.collidepoint(posicion_mouse):
+            self._reproducir(self.sonido_jugar)
             return "jugar"
         if self.rect_salir.collidepoint(posicion_mouse):
+            self._reproducir(self.sonido_salir)
             return "salir"
         return None
+
+    def _reproducir(self, sonido):
+        if sonido is not None:
+            sonido.play()
 
     def _dibujar_boton(self, pantalla, rect, texto, hover):
         color_fondo = config.COLOR_BLANCO if hover else (225, 225, 225)
@@ -37,7 +49,10 @@ class Menu:
         pantalla.blit(superficie_texto, superficie_texto.get_rect(center=rect.center))
 
     def dibujar(self, pantalla, posicion_mouse):
-        pantalla.fill((60, 120, 200))
+        if self.fondo is not None:
+            pantalla.blit(self.fondo, (0, 0))
+        else:
+            pantalla.fill((60, 120, 200))
 
         titulo = self.fuente_titulo.render("Aulas Jugadas", True, config.COLOR_BLANCO)
         pantalla.blit(titulo, titulo.get_rect(center=(self.ancho // 2, self.alto // 2 - 120)))

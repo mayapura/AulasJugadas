@@ -3,9 +3,11 @@ import random
 import pygame
 
 import config
-from src.utils.resource_loader import cargar_imagen
+from src.ui.boton_icono import BotonIcono
+from src.utils.resource_loader import cargar_fuente, cargar_imagen, cargar_sonido
 
 TIEMPO_TOTAL_MS = 7 * 60 * 1000
+TIEMPO_PALABRA_COMPLETA_MS = 2000
 
 PUNTOS_CLASIFICACION_CORRECTA = 10
 PUNTOS_CLASIFICACION_INCORRECTA = -5
@@ -19,7 +21,7 @@ DATASET = [
     {"nombre": "Mouse", "palabra": "MOUSE", "categoria": "HARDWARE", "archivo": "mouse.png"},
     {"nombre": "Monitor", "palabra": "MONITOR", "categoria": "HARDWARE", "archivo": "monitor.png"},
     {"nombre": "Impresora", "palabra": "IMPRESORA", "categoria": "HARDWARE", "archivo": "impresora.png"},
-    {"nombre": "Parlantes", "palabra": "PARLANTES", "categoria": "HARDWARE", "archivo": "parlantes.jpg"},
+    {"nombre": "Parlantes", "palabra": "PARLANTES", "categoria": "HARDWARE", "archivo": "parlantes.png"},
     {"nombre": "Pendrive", "palabra": "PENDRIVE", "categoria": "HARDWARE", "archivo": "pendrive.png"},
     {"nombre": "Cámara web", "palabra": "CAMARA", "categoria": "HARDWARE", "archivo": "camara_web.png"},
     {"nombre": "Auriculares", "palabra": "AURICULARES", "categoria": "HARDWARE", "archivo": "auriculares.png"},
@@ -43,12 +45,15 @@ class HardwareSoftwareGame:
         self.alto = alto
         self.jugador = jugador
 
-        self.fuente_grande = pygame.font.SysFont("Arial", 40, bold=True)
-        self.fuente_mediana = pygame.font.SysFont("Arial", 28)
-        self.fuente_pequena = pygame.font.SysFont("Arial", 20)
-        self.fuente_letra = pygame.font.SysFont("Arial", 22, bold=True)
+        self.fuente_grande = cargar_fuente(config.FUENTE_TITULO, 40)
+        self.fuente_mediana = cargar_fuente(config.FUENTE_BOTON, 28)
+        self.fuente_pequena = cargar_fuente(config.FUENTE_TEXTO, 20)
+        self.fuente_letra = cargar_fuente(config.FUENTE_TEXTO_NEGRITA, 22)
 
         self.fondo = cargar_imagen(config.IMG_FONDO_HARDWARE_SOFTWARE, (ancho, alto))
+
+        self.sonido_correcto = cargar_sonido(config.SONIDO_CORRECTO)
+        self.sonido_incorrecto = cargar_sonido(config.SONIDO_INCORRECTO)
 
         self.caja_hardware_rect = pygame.Rect(50, 380, 200, 150)
         self.caja_software_rect = pygame.Rect(ancho - 250, 380, 200, 150)
@@ -62,10 +67,11 @@ class HardwareSoftwareGame:
         self.rect_volver = pygame.Rect(0, 0, 220, 60)
         self.rect_volver.center = (ancho // 2, alto // 2 + 110)
 
-        self.btn_volver_icono_rect = pygame.Rect(15, 15, 40, 40)
-        self.icono_volver_normal = cargar_imagen(config.IMG_SALIR, (40, 40))
-        self.icono_volver_grande = cargar_imagen(config.IMG_SALIR, (50, 50))
-        self.icono_volver_cargado = self.icono_volver_normal is not None and self.icono_volver_grande is not None
+        self.boton_volver = BotonIcono(
+            config.IMG_VOLVER, pygame.Rect(15, 15, 40, 40), ruta_sonido=config.SONIDO_ATRAS
+        )
+
+        self.icono_tilde = cargar_imagen(config.IMG_TILDE, (40, 40))
 
         self._construir_teclado()
         self.reiniciar()
@@ -122,9 +128,9 @@ class HardwareSoftwareGame:
         if (
             evento.type == pygame.MOUSEBUTTONDOWN
             and evento.button == 1
-            and self.icono_volver_cargado
-            and self.btn_volver_icono_rect.collidepoint(posicion_mouse)
+            and self.boton_volver.sobre_boton(posicion_mouse)
         ):
+            self.boton_volver.reproducir_sonido()
             self.debe_salir = True
             return
 
@@ -160,12 +166,18 @@ class HardwareSoftwareGame:
 
     def _resolver_clasificacion(self, categoria_elegida):
         if categoria_elegida == self.item_actual["categoria"]:
+            self._reproducir(self.sonido_correcto)
             self.jugador.sumar_puntos(PUNTOS_CLASIFICACION_CORRECTA)
             self.fase = "ADIVINAR"
             self.imagen_rect.topleft = self.imagen_pos_inicial
         else:
+            self._reproducir(self.sonido_incorrecto)
             self.jugador.sumar_puntos(PUNTOS_CLASIFICACION_INCORRECTA)
             self._siguiente_item()
+
+    def _reproducir(self, sonido):
+        if sonido is not None:
+            sonido.play()
 
     def _manejar_evento_adivinar(self, evento, posicion_mouse):
         if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
@@ -183,11 +195,14 @@ class HardwareSoftwareGame:
             return
 
         if letra in self.item_actual["palabra"]:
+            self._reproducir(self.sonido_correcto)
             self.letras_adivinadas.add(letra)
             if all(l in self.letras_adivinadas for l in self.item_actual["palabra"]):
                 self.jugador.sumar_puntos(PUNTOS_PALABRA_COMPLETA)
-                self._siguiente_item()
+                self.fase = "COMPLETADO"
+                self.tiempo_completado_restante_ms = TIEMPO_PALABRA_COMPLETA_MS
         else:
+            self._reproducir(self.sonido_incorrecto)
             self.letras_falladas.add(letra)
             self.jugador.sumar_puntos(PUNTOS_LETRA_INCORRECTA)
 
@@ -208,9 +223,15 @@ class HardwareSoftwareGame:
         if self.tiempo_restante_ms <= 0:
             self.tiempo_restante_ms = 0
             self.terminado = True
+            return
+
+        if self.fase == "COMPLETADO":
+            self.tiempo_completado_restante_ms -= dt_ms
+            if self.tiempo_completado_restante_ms <= 0:
+                self._siguiente_item()
 
     def sobre_elemento_interactivo(self, posicion_mouse):
-        if self.icono_volver_cargado and self.btn_volver_icono_rect.collidepoint(posicion_mouse):
+        if self.boton_volver.sobre_boton(posicion_mouse):
             return True
         if self.terminado:
             return self.rect_reintentar.collidepoint(posicion_mouse) or self.rect_volver.collidepoint(
@@ -241,8 +262,11 @@ class HardwareSoftwareGame:
             self._dibujar_clasificar(pantalla)
         elif self.fase == "ADIVINAR":
             self._dibujar_adivinar(pantalla, posicion_mouse)
+        elif self.fase == "COMPLETADO":
+            self._dibujar_adivinar(pantalla, posicion_mouse)
+            self._dibujar_tilde(pantalla)
 
-        self._dibujar_icono_volver(pantalla, posicion_mouse)
+        self.boton_volver.dibujar(pantalla, posicion_mouse)
 
     def _dibujar_imagen(self, pantalla, rect):
         if self.imagen_actual is not None:
@@ -261,14 +285,6 @@ class HardwareSoftwareGame:
 
         texto_puntos = self.fuente_mediana.render(f"Puntos: {self.jugador.puntuacion}", True, config.COLOR_BLANCO)
         pantalla.blit(texto_puntos, (self.ancho - texto_puntos.get_width() - 20, 25))
-
-    def _dibujar_icono_volver(self, pantalla, posicion_mouse):
-        if not self.icono_volver_cargado:
-            return
-        if self.btn_volver_icono_rect.collidepoint(posicion_mouse):
-            pantalla.blit(self.icono_volver_grande, (self.btn_volver_icono_rect.x - 5, self.btn_volver_icono_rect.y - 5))
-        else:
-            pantalla.blit(self.icono_volver_normal, self.btn_volver_icono_rect.topleft)
 
     def _dibujar_caja(self, pantalla, rect, etiqueta):
         if self.imagen_caja is not None:
@@ -328,6 +344,18 @@ class HardwareSoftwareGame:
             pygame.draw.rect(pantalla, (40, 40, 40), rect, width=1, border_radius=6)
             superficie_letra = self.fuente_letra.render(letra, True, (30, 30, 30))
             pantalla.blit(superficie_letra, superficie_letra.get_rect(center=rect.center))
+
+    def _dibujar_tilde(self, pantalla):
+        if self.icono_tilde is None:
+            return
+
+        palabra = self.item_actual["palabra"]
+        espacio = 36
+        x_fin = self.ancho // 2 - (len(palabra) * espacio) // 2 + len(palabra) * espacio
+        y_palabra = 260
+
+        rect_tilde = self.icono_tilde.get_rect(midleft=(x_fin + 10, y_palabra + 12))
+        pantalla.blit(self.icono_tilde, rect_tilde)
 
     def _dibujar_fin(self, pantalla, posicion_mouse):
         titulo = self.fuente_grande.render("¡Tiempo terminado!", True, config.COLOR_BLANCO)

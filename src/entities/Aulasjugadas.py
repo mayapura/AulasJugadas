@@ -4,7 +4,7 @@ import pygame
 
 import config
 from src.utils.dibujo import dibujar_etiqueta
-from src.utils.resource_loader import cargar_imagen, cargar_sonido
+from src.utils.resource_loader import cargar_fuente, cargar_imagen, cargar_sonido
 
 TITULO = "¡Elegí una actividad!"
 
@@ -45,8 +45,8 @@ class Aula:
             "MENU_COMPUTACION": (self.zonas["MENU_COMPUTACION"].centerx, self.zonas["MENU_COMPUTACION"].top - 14),
         }
 
-        self.fuente_titulo = pygame.font.SysFont("Arial", 28, bold=True)
-        self.fuente_etiqueta = pygame.font.SysFont("Arial", 16, bold=True)
+        self.fuente_titulo = cargar_fuente(config.FUENTE_TITULO, 28)
+        self.fuente_etiqueta = cargar_fuente(config.FUENTE_TEXTO_NEGRITA, 16)
         self.fuente_debug = pygame.font.SysFont("Arial", 14, bold=True)
 
     def zona_bajo_mouse(self, posicion_mouse):

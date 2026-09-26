@@ -1,8 +1,9 @@
 import pygame
 
 import config
+from src.ui.boton_icono import BotonIcono
 from src.utils.dibujo import dibujar_etiqueta
-from src.utils.resource_loader import cargar_imagen, cargar_sonido
+from src.utils.resource_loader import cargar_fuente, cargar_imagen, cargar_sonido
 
 
 class SubmenuComputacion:
@@ -28,8 +29,12 @@ class SubmenuComputacion:
             "JUEGO_INFO_4": "Próximamente",
         }
 
-        self.fuente_etiqueta = pygame.font.SysFont("Arial", 16, bold=True)
+        self.fuente_etiqueta = cargar_fuente(config.FUENTE_TEXTO_NEGRITA, 16)
         self.fuente_debug = pygame.font.SysFont("Arial", 14, bold=True)
+
+        self.boton_volver = BotonIcono(
+            config.IMG_VOLVER, pygame.Rect(745, 545, 40, 40), ruta_sonido=config.SONIDO_ATRAS
+        )
 
     def zona_bajo_mouse(self, posicion_mouse):
         for estado, rect in self.zonas.items():
@@ -68,3 +73,5 @@ class SubmenuComputacion:
 
         if modo_debug:
             self._dibujar_zonas_debug(pantalla)
+
+        self.boton_volver.dibujar(pantalla, posicion_mouse)

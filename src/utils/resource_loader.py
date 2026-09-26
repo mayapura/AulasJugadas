@@ -13,6 +13,27 @@ def cargar_imagen(ruta, tamano=None):
         return None
 
 
+def cargar_cursor(ruta, hotspot, tamano=(32, 32)):
+    """Carga una imagen como cursor personalizado. Devuelve None si no se encuentra
+    o si el sistema no soporta cursores personalizados (por ejemplo, sin ventana real)."""
+    imagen = cargar_imagen(ruta, tamano)
+    if imagen is None:
+        return None
+    try:
+        return pygame.cursors.Cursor(hotspot, imagen)
+    except pygame.error:
+        return None
+
+
+def cargar_fuente(ruta, tamano):
+    """Carga una tipografía TTF. Si no se encuentra, usa Arial del sistema como respaldo."""
+    try:
+        return pygame.font.Font(ruta, tamano)
+    except (FileNotFoundError, pygame.error):
+        print(f"Nota: No se encontró la fuente '{ruta}', usando Arial.")
+        return pygame.font.SysFont("Arial", tamano)
+
+
 def cargar_sonido(ruta):
     """Carga un efecto de sonido. Devuelve None si no se encuentra."""
     try:
